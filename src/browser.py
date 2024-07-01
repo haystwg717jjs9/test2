@@ -1,14 +1,18 @@
-import contextlib
+import argparse
 import logging
 import random
 from pathlib import Path
-from typing import Any
+from types import TracebackType
+from typing import Any, Type
 
 import ipapi
 import seleniumwire.undetected_chromedriver as webdriver
+import undetected_chromedriver
+from ipapi.exceptions import RateLimited
 from selenium.webdriver import ChromeOptions
 from selenium.webdriver.chrome.webdriver import WebDriver
 
+from src import Account
 from src.userAgentGenerator import GenerateUserAgent
 from src.utils import Utils
 
@@ -16,19 +20,24 @@ from src.utils import Utils
 class Browser:
     """WebDriver wrapper class."""
 
-    def __init__(self, mobile: bool, account, args: Any) -> None:
+    webdriver: undetected_chromedriver.Chrome
+
+    def __init__(
+        self, mobile: bool, account: Account, args: argparse.Namespace
+    ) -> None:
         # Initialize browser instance
+        logging.debug("in __init__")
         self.mobile = mobile
         self.browserType = "mobile" if mobile else "desktop"
         self.headless = not args.visible
-        self.username = account["username"]
-        self.password = account["password"]
+        self.username = account.username
+        self.password = account.password
         self.localeLang, self.localeGeo = self.getCCodeLang(args.lang, args.geo)
         self.proxy = None
         if args.proxy:
             self.proxy = args.proxy
-        elif account.get("proxy"):
-            self.proxy = account["proxy"]
+        elif account.proxy:
+            self.proxy = account.proxy
         self.userDataDir = self.setupProfiles()
         self.browserConfig = Utils.getBrowserConfig(self.userDataDir)
         (
@@ -41,25 +50,31 @@ class Browser:
             Utils.saveBrowserConfig(self.userDataDir, self.browserConfig)
         self.webdriver = self.browserSetup()
         self.utils = Utils(self.webdriver)
+        logging.debug("out __init__")
 
-    def __enter__(self) -> "Browser":
+    def __enter__(self):
+        logging.debug("in __enter__")
         return self
 
-    def __exit__(self, *args: Any) -> None:
+    def __exit__(
+            self,
+            exc_type: Type[BaseException] | None,
+            exc_value: BaseException | None,
+            traceback: TracebackType | None,
+    ):
         # Cleanup actions when exiting the browser context
-        self.closeBrowser()
+        logging.debug(
+            f"in __exit__ exc_type={exc_type} exc_value={exc_value} traceback={traceback}"
+        )
+        # turns out close is needed for undetected_chromedriver
+        self.webdriver.close()
+        self.webdriver.quit()
 
-    def closeBrowser(self) -> None:
-        """Perform actions to close the browser cleanly."""
-        # Close the web browser
-        with contextlib.suppress(Exception):
-            self.webdriver.close()
-                       
     def browserSetup(
         self,
-    ) -> WebDriver:
+    ) -> undetected_chromedriver.Chrome:
         # Configure and setup the Chrome browser
-        options = webdriver.ChromeOptions()
+        options = undetected_chromedriver.ChromeOptions()
         options.headless = self.headless
         options.add_argument(f"--lang={self.localeLang}")
         options.add_argument("--log-level=3")
@@ -73,7 +88,7 @@ class Browser:
         options.add_argument("--disable-gpu")
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-features=Translate")
-        options.add_argument('--disable-features=PrivacySandboxSettings4')
+        options.add_argument("--disable-features=PrivacySandboxSettings4")
 
         seleniumwireOptions: dict[str, Any] = {"verify_ssl": False}
 
@@ -173,9 +188,7 @@ class Browser:
         Returns:
             Path
         """
-        currentPath = Path(__file__)
-        parent = currentPath.parent.parent
-        sessionsDir = parent / "sessions"
+        sessionsDir = Utils.getProjectRoot() / "sessions"
 
         # Concatenate username and browser type for a plain text session ID
         sessionid = f"{self.username}"
@@ -184,20 +197,23 @@ class Browser:
         sessionsDir.mkdir(parents=True, exist_ok=True)
         return sessionsDir
 
-    def getCCodeLang(self, lang: str, geo: str) -> tuple:
+    @staticmethod
+    def getCCodeLang(lang: str, geo: str) -> tuple:
         if lang is None or geo is None:
             try:
                 nfo = ipapi.location()
-                if isinstance(nfo, dict):
-                    if lang is None:
-                        lang = nfo["languages"].split(",")[0].split("-")[0]
-                    if geo is None:
-                        geo = nfo["country"]
-            except Exception:  # pylint: disable=broad-except
-                return ("en", "US")
-        return (lang, geo)
+            except RateLimited:
+                logging.warning("Returning default", exc_info=True)
+                return "en", "US"
+            if isinstance(nfo, dict):
+                if lang is None:
+                    lang = nfo["languages"].split(",")[0].split("-")[0]
+                if geo is None:
+                    geo = nfo["country"]
+        return lang, geo
 
-    def getChromeVersion(self) -> str:
+    @staticmethod
+    def getChromeVersion() -> str:
         chrome_options = ChromeOptions()
         chrome_options.add_argument("--headless=new")
         chrome_options.add_argument("--no-sandbox")
