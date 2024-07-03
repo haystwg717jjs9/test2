@@ -68,7 +68,7 @@ class Searches:
             logging.info(f"[BING] {i}/{numberOfSearches}")
             points = self.bingSearch(word)
             if points <= pointsCounter:
-                relatedTerms = self.getRelatedTerms(word)[:2]
+                relatedTerms = self.getRelatedTerms(word)[:0]
                 for term in relatedTerms:
                     points = self.bingSearch(term)
                     if not points <= pointsCounter:
@@ -100,9 +100,12 @@ class Searches:
                 self.browser.utils.waitUntilClickable(By.ID, "sb_form_q")
                 searchbar = self.webdriver.find_element(By.ID, "sb_form_q")
                 searchbar.clear()
-                searchbar.send_keys(word)
+                for char in word:
+                    searchbar.send_keys(char)
+                    delay = random.uniform(0.2, 1)
+                    time.sleep(delay)
                 searchbar.submit()
-                time.sleep(Utils.randomSeconds(100, 180))
+                time.sleep(Utils.randomSeconds(200, 300))
 
                 # Scroll down after the search (adjust the number of scrolls as needed)
                 for _ in range(3):  # Scroll down 3 times
