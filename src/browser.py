@@ -13,16 +13,23 @@ from src.userAgentGenerator import GenerateUserAgent
 from src.utils import Utils
 
 
+DEFAULT_SLEEP = 240
 class Browser:
     """WebDriver wrapper class."""
 
     def __init__(self, mobile: bool, account, args: Any) -> None:
-        # Initialize browser instance
         self.mobile = mobile
         self.browserType = "mobile" if mobile else "desktop"
         self.headless = not args.visible
         self.username = account["username"]
         self.password = account["password"]
+        try:
+            self.sleep = account["sleep"]
+        except Exception:
+            self.sleep = DEFAULT_SLEEP
+        logging.info(
+            f'[BROWSER] { self.sleep } seconds between searches '
+        )
         self.localeLang, self.localeGeo = self.getCCodeLang(args.lang, args.geo)
         self.proxy = None
         if args.proxy:
@@ -46,19 +53,18 @@ class Browser:
         return self
 
     def __exit__(self, *args: Any) -> None:
-        # Cleanup actions when exiting the browser context
         self.closeBrowser()
 
     def closeBrowser(self) -> None:
         """Perform actions to close the browser cleanly."""
-        # Close the web browser
+        # close web browser
         with contextlib.suppress(Exception):
             self.webdriver.close()
-                       
+            self.webdriver.quit()
+
     def browserSetup(
         self,
     ) -> WebDriver:
-        # Configure and setup the Chrome browser
         options = webdriver.ChromeOptions()
         options.headless = self.headless
         options.add_argument(f"--lang={self.localeLang}")
@@ -74,11 +80,10 @@ class Browser:
         options.add_argument("--disable-default-apps")
         options.add_argument("--disable-features=Translate")
         options.add_argument('--disable-features=PrivacySandboxSettings4')
-
+        
         seleniumwireOptions: dict[str, Any] = {"verify_ssl": False}
 
         if self.proxy:
-            # Setup proxy if provided
             seleniumwireOptions["proxy"] = {
                 "http": self.proxy,
                 "https": self.proxy,
@@ -162,7 +167,12 @@ class Browser:
                 "userAgentMetadata": self.userAgentMetadata,
             },
         )
-
+        # Set timeout to something bigger that account sleep
+        timeout = self.sleep + 5
+        logging.info(
+            f'[BROWSER] Default timeout:{timeout}'
+        )
+        driver.set_page_load_timeout(timeout)
         return driver
 
     def setupProfiles(self) -> Path:
