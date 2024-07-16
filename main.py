@@ -213,7 +213,7 @@ def executeBot(currentAccount, args: argparse.Namespace):
         ReadToEarn(desktopBrowser).completeReadToEarn(startingPoints)
         DailySet(desktopBrowser).completeDailySet()
         # PunchCards(desktopBrowser).completePunchCards()
-        # MorePromotions(desktopBrowser).completeMorePromotions()
+        MorePromotions(desktopBrowser).completeMorePromotions()
         # VersusGame(desktopBrowser).completeVersusGame()
         (
             remainingSearches,
