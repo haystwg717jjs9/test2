@@ -222,7 +222,7 @@ def executeBot(currentAccount, args: argparse.Namespace):
 
         # Introduce random pauses before and after searches
         pause_before_search = random.uniform(
-            05.0, 10.0
+            11.0, 15.0
         )  # Random pause between 11 to 15 seconds
         time.sleep(pause_before_search)
 
@@ -232,7 +232,7 @@ def executeBot(currentAccount, args: argparse.Namespace):
             )
 
         pause_after_search = random.uniform(
-            05.0, 10.0
+            11.0, 15.0
         )  # Random pause between 11 to 15 seconds
         time.sleep(pause_after_search)
 
