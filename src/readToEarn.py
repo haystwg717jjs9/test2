@@ -28,7 +28,7 @@ class ReadToEarn:
     def completeReadToEarn(self,startingPoints):
         
         logging.info("[READ TO EARN] " + "Trying to complete Read to Earn...")
-           
+        
         accountName = self.browser.username
         
         # Should Really Cache Token and load it in.
@@ -61,14 +61,15 @@ class ReadToEarn:
         
         # json data to confirm an article is read
         json_data = {
-            'amount': 1,
-            'country': 'in',
-            'id': 1,
-            'type': 101,
-            'attributes': {
-                'offerid': 'ENUS_readarticle3_30points',
-                },
-            }
+            "amount": 1,
+            # "country": "us",
+            "country": self.browser.localeGeo.lower(),
+            "id": 1,
+            "type": 101,
+            "attributes": {
+                "offerid": "ENUS_readarticle3_30points",
+            },
+        }
 
         balance = startingPoints
         # 10 is the most articles you can read. Sleep time is a guess, not tuned
@@ -83,6 +84,6 @@ class ReadToEarn:
             else:
                 logging.info("[READ TO EARN] Read Article " + str(i+1))
                 balance = newbalance
-                time.sleep(random.randint(100, 180))
+                time.sleep(random.randint(10, 20))
         
         logging.info("[READ TO EARN] Completed the Read to Earn successfully !") 
