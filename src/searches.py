@@ -116,7 +116,19 @@ class Searches:
                         Utils.randomSeconds(7, 10)
                     )  # Random wait between scrolls
 
+                return self.browser.utils.getBingAccountPoints()
+            except TimeoutException:
+                if i == 5:
+                    logging.info("[BING] " + "TIMED OUT GETTING NEW PROXY")
+                    self.webdriver.proxy = self.browser.giveMeProxy()
+                elif i == 10:
+                    logging.error(
+                        "[BING] "
+                        + "Cancelling mobile searches due to too many retries."
+                    )
                     return self.browser.utils.getBingAccountPoints()
+                self.browser.utils.tryDismissAllMessages()
                 logging.error("[BING] " + "Timeout, retrying in 5~ seconds...")
                 time.sleep(Utils.randomSeconds(7, 15))
+                i += 1
                 continue
